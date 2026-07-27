@@ -88,7 +88,7 @@ local getcustomassets = {
 	['newvape/assets/new/guislider.png'] = 'rbxassetid://14368320020',
 	['newvape/assets/new/guisliderrain.png'] = 'rbxassetid://14368321228',
 	['newvape/assets/new/guiv4.png'] = 'rbxassetid://14368322199',
-	['newvape/assets/new/guivape.png'] = 'rbxassetid://14657521312',
+	['newvape/assets/new/guivape.png'] = 'rbxassetid://133372164755523',
 	['newvape/assets/new/info.png'] = 'rbxassetid://14368324807',
 	['newvape/assets/new/inventoryicon.png'] = 'rbxassetid://14928011633',
 	['newvape/assets/new/legit.png'] = 'rbxassetid://14425650534',
@@ -136,7 +136,7 @@ local function safecall(func, ...)
 	xpcall(function()
 		func(unpack(args))
 	end, function(err)
-		warn("[AEROV4] GUI Error: "..err)
+		warn("[FROSTWARE] GUI Error: "..err)
 	end)
 end
 
@@ -7205,7 +7205,7 @@ local scarcitybanner = Instance.new('TextLabel')
 scarcitybanner.Size = UDim2.fromScale(1, 0.02)
 scarcitybanner.Position = UDim2.fromScale(0, 0.97)
 scarcitybanner.BackgroundTransparency = 1
-scarcitybanner.Text = 'Join AeroV4 server to report any bugs, suggestions or buy prem, click discord icon :D'
+scarcitybanner.Text = 'Join Nova server to report any bugs, suggestions or buy prem, click discord icon :D'
 scarcitybanner.TextScaled = true
 scarcitybanner.TextColor3 = Color3.new(1, 1, 1)
 scarcitybanner.TextStrokeTransparency = 0.5
