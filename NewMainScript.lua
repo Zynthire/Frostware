@@ -87,7 +87,7 @@ end
 
 if not shared.VapeDeveloper then
 	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/poopparty/poopparty')
+		return game:HttpGet('https://github.com/Zynthire/Frostware')
 	end)
 
 	local commit = 'main'
