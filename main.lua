@@ -28,7 +28,7 @@ local vape
 local loadstring = function(...)
 	local res, err = _realLoadstring(...)
 	if err and vape then
-		vape:CreateNotification('AeroV4', 'Failed to load : '..err, 30, 'alert')
+		vape:CreateNotification('Frostware', 'Failed to load : '..err, 30, 'alert')
 	end
 	return res
 end
@@ -49,8 +49,8 @@ do
 		end
 	end)
 	if _hookDetected then
-		game:GetService('Players').LocalPlayer:Kick('[AEROV4] integrity check failed - what u trying to do???')
-		error('[AEROV4] loadstring hook detected - if this is false dm aero', 2)
+		game:GetService('Players').LocalPlayer:Kick('[FROSTWARE] integrity check failed.')
+		error('[FROSTWARE] loadstring hook detected', 2)
 	end
 end
 local queue_on_teleport = queue_on_teleport or function() end
@@ -72,7 +72,7 @@ local function downloadFile(path, func)
 		local success = false
 		for attempt = 1, 3 do
 			local suc, result = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/poopparty/poopparty/' .. readfile('newvape/profiles/commit.txt') .. '/' .. select(1, path:gsub('newvape/', '')), true)
+				return game:HttpGet('https://raw.githubusercontent.com/Zynthire/Frostware/' .. readfile('newvape/profiles/commit.txt') .. '/' .. select(1, path:gsub('newvape/', '')), true)
 			end)
 			if suc and result ~= '404: Not Found' then
 				res = result
@@ -134,7 +134,7 @@ pcall(migrateProfiles)
 local function finishLoading()
 	vape.Init = nil
 	if not vape.Load then
-		warn('[AEROV4] vape.Load is nil skipping load')
+		warn('[FROSTWARE] vape.Load is nil skipping load')
 		return
 	end
 	vape:Load()
@@ -150,7 +150,7 @@ local function finishLoading()
 		if (not teleportedServers) and (not shared.VapeIndependent) then
 			teleportedServers = true
 			local teleportScript = [[
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/poopparty/poopparty/'..readfile('newvape/profiles/commit.txt')..'/loader.lua', true), 'loader')()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/Zynthire/Frostware/'..readfile('newvape/profiles/commit.txt')..'/loader.lua', true), 'loader')()
 			]]
 			if shared.VapeDeveloper then
 				teleportScript = 'shared.VapeDeveloper = true\n' .. teleportScript
@@ -162,7 +162,7 @@ local function finishLoading()
 				teleportScript = 'shared.ValidatedUsername = "' .. shared.ValidatedUsername .. '"\n' .. teleportScript
 			end
 			local _ok, _err = pcall(function() vape:Save() end)
-			if not _ok then warn('[AEROV4] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
+			if not _ok then warn('[FROSTWARE] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
 			queue_on_teleport(teleportScript)
 		end
 	end))
@@ -188,7 +188,7 @@ local function finishLoading()
 					end
 				end
 				
-				vape:CreateNotification('[AEROV4] Finished Loading [Tier ' .. tostring(tier) .. ']', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
+				vape:CreateNotification('[FROSTWARE] Finished Loading [Tier ' .. tostring(tier) .. ']', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
 			end)
 		end
 	end
@@ -221,18 +221,18 @@ if not guiFunc then
 		end
 		context = '\n\nContext:\n' .. table.concat(parts, '\n')
 	end
-	error('[AEROV4] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
+	error('[FROSTWARE] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
 end
 vape = guiFunc()
 if not vape then
-	error('[AEROV4] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
+	error('[FROSTWARE] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
 end
 if not vape.Load then
 	if delfile then pcall(function() delfile('newvape/guis/' .. gui .. '.lua') end) end
 	error('[AEROV4] gui file corrupted (missing load) reinject..')
 end
 if not vape.Init and not vape.Load then
-	error('[AEROV4] failed to initialize properly reinject to fix this bs')
+	error('[FROSTWARE] failed to initialize properly reinject to fix this bs')
 end
 shared.vape = vape
 task.wait(0.1)
@@ -652,7 +652,7 @@ if not shared.VapeIndependent then
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/poopparty/poopparty/' .. readfile('newvape/profiles/commit.txt') .. '/games/' .. gameFileId .. '.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/Zynthire/Frostware/' .. readfile('newvape/profiles/commit.txt') .. '/games/' .. gameFileId .. '.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
 				_realLoadstring(downloadFile('newvape/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
