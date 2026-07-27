@@ -88,7 +88,7 @@ local getcustomassets = {
 	['newvape/assets/new/guislider.png'] = 'rbxassetid://14368320020',
 	['newvape/assets/new/guisliderrain.png'] = 'rbxassetid://14368321228',
 	['newvape/assets/new/guiv4.png'] = 'rbxassetid://14368322199',
-	['newvape/assets/new/guivape.png'] = 'rbxassetid://14657521312',
+	['newvape/assets/new/frost.png'] = 'rbxassetid://133372164755523',
 	['newvape/assets/new/info.png'] = 'rbxassetid://14368324807',
 	['newvape/assets/new/inventoryicon.png'] = 'rbxassetid://14928011633',
 	['newvape/assets/new/legit.png'] = 'rbxassetid://14425650534',
@@ -3668,7 +3668,7 @@ function mainapi:CreateGUI()
 	logo.Size = UDim2.fromOffset(62, 18)
 	logo.Position = UDim2.fromOffset(11, 10)
 	logo.BackgroundTransparency = 1
-	logo.Image = getcustomasset('newvape/assets/new/guivape.png')
+	logo.Image = getcustomasset('newvape/assets/new/frost.png')
 	logo.ImageColor3 = select(3, uipallet.Main:ToHSV()) > 0.5 and uipallet.Text or Color3.new(1, 1, 1)
 	logo.Parent = window
 	local logov4 = Instance.new('ImageLabel')
