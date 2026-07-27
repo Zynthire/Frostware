@@ -14,7 +14,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/poopparty/poopparty/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/Zynthire/Frostware/'..readfile('newvape/profiles/commit.txt')..'/'..select(1, path:gsub('newvape/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -59,7 +59,7 @@ local function downloadPremadeProfiles(commit)
     end
 
     local success, response = pcall(function()
-        return game:HttpGet('https://api.github.com/repos/poopparty/poopparty/contents/profiles/premade?ref=' .. commit)
+        return game:HttpGet('https://api.github.com/repos/Zynthire/Frostware/contents/profiles/premade?ref=' .. commit)
     end)
 
     if success and response then
@@ -92,7 +92,7 @@ if not shared.VapeDeveloper then
 
 	local commit = 'main'
 	local ok, res = pcall(function()
-		return game:HttpGet('https://api.github.com/repos/poopparty/poopparty/commits/main', true)
+		return game:HttpGet('https://api.github.com/repos/Zynthire/Frostware/commits/main', true)
 	end)
 
 	if ok and res then
