@@ -4612,25 +4612,17 @@ do
             return false, "target is on top of you"
         end
 
-        -- Reach spoof (Vape-style): report selfPosition closer along the real path
-        -- so the server sees ≤ ~14.4 studs. Keeps first-person strafing working.
-        local limit = (type(Bedwars.ReachLimit) == "number" and Bedwars.ReachLimit > 0)
-            and (Bedwars.ReachLimit - 0.01)
-            or 14.39
+        -- Server hard-caps sword reach around 14.4. Always spoof to that, never the
+        -- slider max (22) or a mis-read ReachLimit — those made long-range + FP fail.
+        local serverReach = 14.39
         local dir = offset.Unit
         local reportedSelf = selfPos
-        if mag > limit then
-            reportedSelf = selfPos + dir * (mag - limit)
+        if mag > serverReach then
+            reportedSelf = selfPos + dir * (mag - serverReach)
         end
 
         local cam = Workspace.CurrentCamera
         local camOrigin = (cam and cam.CFrame.Position) or selfPos
-        local camDir = targetPos - camOrigin
-        if camDir.Magnitude > 0.01 then
-            camDir = camDir.Unit
-        else
-            camDir = dir
-        end
 
         local payload = {
             weapon = weapon,
@@ -4639,7 +4631,7 @@ do
             validate = {
                 raycast = {
                     cameraPosition = { value = camOrigin },
-                    cursorDirection = { value = camDir },
+                    cursorDirection = { value = dir },
                 },
                 targetPosition = { value = targetPos },
                 selfPosition = { value = reportedSelf },
@@ -4999,7 +4991,7 @@ do
                     return
                 end
 
-                -- CatVape Attackable check (local only): don't swing while frozen / on elk / etc.
+                -- CatVape Attackable check (you only): frozen / Sophia, elk
                 if cfg.AttackableCheck then
                     if char:FindFirstChild("elk") then
                         idle("not attackable (elk)")
@@ -5012,7 +5004,8 @@ do
                         frozen = ok and active == true
                     else
                         local attr = char:GetAttribute("StatusEffect_frozen")
-                        frozen = attr == true or (type(attr) == "number" and attr > Workspace:GetServerTimeNow())
+                        frozen = attr == true
+                            or (type(attr) == "number" and attr > Workspace:GetServerTimeNow())
                     end
                     if frozen then
                         idle("not attackable (frozen)")
@@ -5158,7 +5151,7 @@ do
         Label = "Attackable Check",
         Key = "AttackableCheck",
         Default = true,
-        Tip = "Stops swinging while you are frozen (Sophia), on elk, or otherwise can't attack. Same as CatVape.",
+        Tip = "Stops swinging while you are frozen (Sophia) or on elk. Same as CatVape.",
     })
     aura:AddSection("Visuals")
     aura:AddToggle({ Label = "Swing Animation", Key = "SwingAnimation", Default = true, ShowIf = function(c) return not c.SwingOnly end })
