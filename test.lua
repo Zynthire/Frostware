@@ -274,24 +274,34 @@ function Util.GetTargets(mode)
     local includeNPCs = mode == "Players + NPCs" or mode == "NPCs Only"
     local list, count = {}, 0
     local myChar = LocalPlayer.Character
+    local cam = Workspace.CurrentCamera
 
     for hum, entry in pairs(TargetRegistry.Entries) do
         local model = hum.Parent
         if model and model:IsA("Model") and model ~= myChar and hum.Health > 0
             and not (myChar and model:IsDescendantOf(myChar)) then
-            local plr = Players:GetPlayerFromCharacter(model)
-            if (plr and includePlayers) or (not plr and includeNPCs) then
-                local root = entry.Root
-                if not root or root.Parent ~= model then
-                    root = findRoot(model)
-                    entry.Root = root
-                end
-                if root then
-                    entry.Model = model
-                    entry.Player = plr
-                    entry.Name = plr and plr.DisplayName or model.Name
-                    count = count + 1
-                    list[count] = entry
+            -- Skip first-person viewmodels / camera arms (show up as "Viewmodel" in status)
+            local modelName = string.lower(model.Name)
+            if modelName:find("viewmodel", 1, true)
+                or modelName:find("view_model", 1, true)
+                or modelName == "arms"
+                or (cam and model:IsDescendantOf(cam)) then
+                -- ignore
+            else
+                local plr = Players:GetPlayerFromCharacter(model)
+                if (plr and includePlayers) or (not plr and includeNPCs) then
+                    local root = entry.Root
+                    if not root or root.Parent ~= model then
+                        root = findRoot(model)
+                        entry.Root = root
+                    end
+                    if root then
+                        entry.Model = model
+                        entry.Player = plr
+                        entry.Name = plr and plr.DisplayName or model.Name
+                        count = count + 1
+                        list[count] = entry
+                    end
                 end
             end
         end
@@ -4597,8 +4607,29 @@ do
         end
 
         local offset = targetPos - selfPos
-        if offset.Magnitude < 0.01 then
+        local mag = offset.Magnitude
+        if mag < 0.01 then
             return false, "target is on top of you"
+        end
+
+        -- Reach spoof (Vape-style): report selfPosition closer along the real path
+        -- so the server sees ≤ ~14.4 studs. Keeps first-person strafing working.
+        local limit = (type(Bedwars.ReachLimit) == "number" and Bedwars.ReachLimit > 0)
+            and (Bedwars.ReachLimit - 0.01)
+            or 14.39
+        local dir = offset.Unit
+        local reportedSelf = selfPos
+        if mag > limit then
+            reportedSelf = selfPos + dir * (mag - limit)
+        end
+
+        local cam = Workspace.CurrentCamera
+        local camOrigin = (cam and cam.CFrame.Position) or selfPos
+        local camDir = targetPos - camOrigin
+        if camDir.Magnitude > 0.01 then
+            camDir = camDir.Unit
+        else
+            camDir = dir
         end
 
         local payload = {
@@ -4607,11 +4638,11 @@ do
             entityInstance = targetChar,
             validate = {
                 raycast = {
-                    cameraPosition = { value = selfPos },
-                    cursorDirection = { value = offset.Unit },
+                    cameraPosition = { value = camOrigin },
+                    cursorDirection = { value = camDir },
                 },
                 targetPosition = { value = targetPos },
-                selfPosition = { value = selfPos },
+                selfPosition = { value = reportedSelf },
             },
         }
 
@@ -4752,49 +4783,12 @@ do
         attempt("StatusEffectUtil", function()
             return require(walk(ReplicatedStorage, "TS", "status-effect", "status-effect-util")).StatusEffectUtil
         end)
-        attempt("QueryUtil", function()
-            return require(walk(ReplicatedStorage, "rbxts_include", "node_modules", "@easy-games", "game-core", "out")).GameQueryUtil
-        end)
 
         if Bedwars.BlockController and Bedwars.DamageBlockRemotes and Bedwars.Store then
             Bedwars.ExtrasReady = true
             return true
         end
         return Bedwars.BlockController ~= nil, "still loading"
-    end
-
-    -- CatVape-style Attackable check: false when you/target can't swing or be hit
-    -- (stunned, frozen/Sophia, forcefield, elk mount, etc.)
-    function Bedwars.IsAttackableCharacter(character)
-        if not character then
-            return false
-        end
-        if character:FindFirstChildWhichIsA("ForceField") then
-            return false
-        end
-        local stunned = character:GetAttribute("StunnedUntilTime")
-        if type(stunned) == "number" and stunned > Workspace:GetServerTimeNow() then
-            return false
-        end
-        if character:FindFirstChild("elk") then
-            return false
-        end
-        local util = Bedwars.StatusEffectUtil
-        if util and type(util.isActive) == "function" then
-            local ok, active = pcall(util.isActive, util, character, "frozen")
-            if ok and active then
-                return false
-            end
-        else
-            local frozen = character:GetAttribute("StatusEffect_frozen")
-            if frozen == true then
-                return false
-            end
-            if type(frozen) == "number" and frozen > Workspace:GetServerTimeNow() then
-                return false
-            end
-        end
-        return true
     end
 
     -- Same as ResolveExtras but waits (up to `timeout` seconds) for the game to finish loading
@@ -4906,9 +4900,6 @@ do
                         return "is spectating"
                     end
                 end
-                if cfg.AttackableCheck and entry.Model and not Bedwars.IsAttackableCharacter(entry.Model) then
-                    return "not attackable (frozen / forcefield)"
-                end
                 local offset = entry.Root.Position - root.Position
                 local distance = offset.Magnitude
                 if distance > cfg.Range then
@@ -5007,10 +4998,24 @@ do
                     idle("stunned")
                     return
                 end
+
+                -- CatVape Attackable check (local only): don't swing while frozen / on elk / etc.
                 if cfg.AttackableCheck then
-                    pcall(Bedwars.ResolveExtras)
-                    if not Bedwars.IsAttackableCharacter(char) then
-                        idle("not attackable (frozen / forcefield)")
+                    if char:FindFirstChild("elk") then
+                        idle("not attackable (elk)")
+                        return
+                    end
+                    local frozen = false
+                    local util = Bedwars.StatusEffectUtil
+                    if util and type(util.isActive) == "function" then
+                        local ok, active = pcall(util.isActive, util, char, "frozen")
+                        frozen = ok and active == true
+                    else
+                        local attr = char:GetAttribute("StatusEffect_frozen")
+                        frozen = attr == true or (type(attr) == "number" and attr > Workspace:GetServerTimeNow())
+                    end
+                    if frozen then
+                        idle("not attackable (frozen)")
                         return
                     end
                 end
@@ -5044,14 +5049,9 @@ do
                     return
                 end
 
-                -- Split by what the server will actually accept from your real position
-                local reachable = {}
-                for _, candidate in ipairs(targets) do
-                    if candidate.Distance <= Bedwars.ReachLimit then
-                        reachable[#reachable + 1] = candidate
-                    end
-                end
-                local lead = reachable[1] or targets[1]
+                -- All targets inside the user's Range; SendHit spoofs reach for the server
+                local reachable = targets
+                local lead = targets[1]
                 local leadEntry = lead.Entry
                 local leadText = string.format("%s (%.1f studs)", tostring(leadEntry.Name), lead.Distance)
                 local now = os.clock()
@@ -5096,17 +5096,6 @@ do
                     else
                         setStatus(cfg.StatusLine, "target " .. leadText)
                     end
-                    return
-                end
-
-                -- Everyone in Range is past the server's reach: swing animation only, no hit packet
-                if #reachable == 0 then
-                    if cfg.SwingAnimation and not cfg.SwingOnly then
-                        playSwing(meta)
-                    end
-                    lastSend = now
-                    nextInterval = interval
-                    setStatus(cfg.StatusLine, string.format("%s is past the server's %.1f stud reach - swinging only", leadText, Bedwars.ReachLimit))
                     return
                 end
 
@@ -5169,7 +5158,7 @@ do
         Label = "Attackable Check",
         Key = "AttackableCheck",
         Default = true,
-        Tip = "Skips swinging when you or the target can't be hit (frozen / Sophia, forcefield, stunned, elk).",
+        Tip = "Stops swinging while you are frozen (Sophia), on elk, or otherwise can't attack. Same as CatVape.",
     })
     aura:AddSection("Visuals")
     aura:AddToggle({ Label = "Swing Animation", Key = "SwingAnimation", Default = true, ShowIf = function(c) return not c.SwingOnly end })
@@ -5178,48 +5167,6 @@ do
     aura:AddToggle({ Label = "Status Line", Key = "StatusLine", Default = true, Tip = "Small readout at the bottom of the screen." })
     aura:AddSection("About")
     aura:AddLabel("Bedwars only. Hold a sword. Hits use your real position, so they only register up to the server's reach (about 14.4 studs); targets further out just get a swing. The sword's own attack speed is the minimum interval. Swing Only = one hit per click you make.")
-end
-
--- ====================== MODULE: HITFIX ======================
--- CatVape-style: patches SwordController.swingSwordAtMouse to use the correct raycast API
--- (lowercase "raycast" + GameQueryUtil) so client sword swings register more reliably.
-do
-    local hitFix
-    hitFix = Tabs.Combat:CreateModule({
-        Name = "HitFix",
-        Description = "Fixes client sword raycasts so swings land more reliably.",
-        OnEnable = function(mod)
-            local ready, why = Bedwars.Resolve()
-            assert(ready, why or "Bedwars isn't loaded yet")
-            pcall(Bedwars.ResolveExtras)
-
-            local sword = Bedwars.SwordController
-            assert(sword and type(sword.swingSwordAtMouse) == "function", "SwordController.swingSwordAtMouse not found")
-            assert(debug and type(debug.setconstant) == "function" and type(debug.setupvalue) == "function",
-                "This executor can't patch functions (needs debug.setconstant / setupvalue)")
-
-            local fn = sword.swingSwordAtMouse
-            local query = Bedwars.QueryUtil
-
-            -- Same patch CatVape uses: constant "Raycast" -> "raycast", upvalue workspace -> QueryUtil
-            local okConst = pcall(debug.setconstant, fn, 23, "raycast")
-            local okUp = true
-            if query then
-                okUp = pcall(debug.setupvalue, fn, 4, query)
-            end
-            if not okConst and not okUp then
-                error("Couldn't patch swingSwordAtMouse (Bedwars update or executor blocked it)")
-            end
-
-            mod.Maid:Give(function()
-                pcall(debug.setconstant, fn, 23, "Raycast")
-                pcall(debug.setupvalue, fn, 4, Workspace)
-            end)
-
-            mod:SetStatus("Patched swingSwordAtMouse")
-        end,
-    })
-    hitFix:AddLabel("Bedwars only. Uses the same raycast fix as CatVape HitFix. Needs an executor with debug.setconstant.")
 end
 
 -- ====================== MODULE: BEDWARS PROJECTILE AIM ======================
